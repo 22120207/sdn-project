@@ -12,7 +12,7 @@ class part1_topo(Topo):
         for i in range(1,5):
             hostname = f"h{i}"
             mac_addr = f"00:00:00:00:00:0{i}"
-            ip_addr = "10.0.0.{i{/24"
+            ip_addr = "10.0.0.{i}/24"
             host = self.addHost(host, mac=mac_addr, ip=ip_addr)
             
             self.addLink(host, s1)
