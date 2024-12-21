@@ -8,11 +8,14 @@ from mininet.cli import CLI
 
 class part1_topo(Topo):
     def build(self):
-        pass
-        # switch1 = self.addSwitch('switchname')
-        # host1 = self.addHost('hostname')
-        # self.addLink(hostname,switchname)
-
+        s1 = self.addSwitch("s1")
+        for i in range(1,5):
+            hostname = f"h{i}"
+            mac_addr = f"00:00:00:00:00:0{i}"
+            ip_addr = "10.0.0.{i{/24"
+            host = self.addHost(host, mac=mac_addr, ip=ip_addr)
+            
+            self.addLink(host, s1)
 
 topos = {"part1": part1_topo}
 
