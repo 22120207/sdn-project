@@ -6,8 +6,13 @@
 from pox.core import core
 import pox.openflow.libopenflow_01 as of
 from pox.lib.addresses import IPAddr, IPAddr6, EthAddr
+import pox.lib.packet as pkt
 
 log = core.getLogger()
+
+# Flood all ports
+all_ports = of.OFPP_FLOOD
+
 
 # Convenience mappings of hostnames to ips
 IPS = {
@@ -18,6 +23,7 @@ IPS = {
     "hnotrust": "172.16.10.100",
 }
 
+
 # Convenience mappings of hostnames to subnets
 SUBNETS = {
     "h10": "10.0.1.0/24",
@@ -27,6 +33,24 @@ SUBNETS = {
     "hnotrust": "172.16.10.0/24",
 }
 
+
+PRIORITIES = {
+    "highest": 100,
+    "high": 80,
+    "medium": 60,
+    "low": 40,
+    "lowest": 20,
+    "no_priority": 0
+}
+
+
+PORT_MAPPING = {
+    "h10": 1, 
+    "h20": 2, 
+    "h30": 3, 
+    "serv1": 4, 
+    "hnotrust": 5
+}
 
 class Part3Controller(object):
     """
@@ -41,6 +65,7 @@ class Part3Controller(object):
 
         # This binds our PacketIn event listener
         connection.addListeners(self)
+
         # use the dpid to figure out what switch is being created
         if connection.dpid == 1:
             self.s1_setup()
@@ -55,26 +80,80 @@ class Part3Controller(object):
         else:
             print("UNKNOWN SWITCH")
             exit(1)
+    
+    def drop_packet(self, connection):
+        # Drop packets that not match others flow entries
+        connection.send(of.ofp_flow_mod(
+            priority=PRIORITIES['no_priority']
+        ))
+
+    def allow_all_traffic(self, connection):
+        # Flood to all ports
+        connection.send(of.ofp_flow_mod(
+            action=of.ofp_action_output(port=all_ports),
+            priority=PRIORITIES['highest']
+        ))
+
+        # Drop packets that not match others flow entries
+        drop_packet(connection)
+
+
+    def control_icmp_traffic(self, connection):
+        # NOT allow hnotrust to send ICMP REQUEST traffic
+        connection.send(of.ofp_flow_mod(
+            priority=PRIORITIES['highest'],
+            match=of.ofp_match(dl_type=0x0800, nw_proto=pkt.ipv4.ICMP_PROTOCOL, nw_src=IPS['hnotrust'])
+        ))
+
+        # Allow authorized hosts to send icmp traffic between themselves
+        for hostname, address in IPS.items():
+
+            if hostname != "hnotrust":
+                connection.send(of.ofp_flow_mod(
+                    action=of.ofp_action_output(port=PORT_MAPPING[hostname]),
+                    priority=PRIORITIES['high'],
+                    match=of.ofp_match(dl_type=0x0800, nw_proto=pkt.ipv4.ICMP_PROTOCOL, nw_dst=address)
+                ))
+
+
+    def block_host_to_serv(self, connection):
+        # Block a hnotrust1 IP traffic to and server
+        connection.send(of.ofp_flow_mod(
+            priority=PRIORITIES['medium'],
+            match=of.ofp_match(dl_type=0x0800, nw_src=IPS["hnotrust"], nw_dst=IPS['serv1'])
+        ))
+
+
+    def allow_ip_traffic(self, connection):
+        # Allow all IP traffic
+        connection.send(of.ofp_flow_mod(
+            action=of.ofp_action_output(port=all_ports),
+            priority=PRIORITIES['low'],
+            match=of.ofp_match(dl_type=0x0800)
+        ))
+
+        # Drop packets that not match others flow entries
+        drop_packet(connection)
+    
+
+    ## Set up RULES ##
 
     def s1_setup(self):
-        # put switch 1 rules here
-        pass
+        self.allow_all_traffic(self.connection)
 
     def s2_setup(self):
-        # put switch 2 rules here
-        pass
+        self.allow_all_traffic(self.connection)
 
     def s3_setup(self):
-        # put switch 3 rules here
-        pass
+        self.allow_all_traffic(self.connection)
 
     def cores21_setup(self):
-        # put core switch rules here
-        pass
+        self.control_icmp_traffic(self.connection)
+        self.block_host_to_serv(self.connection)
+        self.allow_ip_traffic(self.connection)
 
     def dcs31_setup(self):
-        # put datacenter switch rules here
-        pass
+        self.allow_all_traffic(self.connection)
 
     # used in part 4 to handle individual ARP packets
     # not needed for part 3 (USE RULES!)
