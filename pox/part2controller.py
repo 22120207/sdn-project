@@ -25,8 +25,6 @@ class Firewall(object):
         # This binds our PacketIn event listener
         connection.addListeners(self)
 
-        # add switch rules here
-
         # Allow any ICMP IPv4
         connection.send(of.ofp_flow_mod(
             action=of.ofp_action_output(port=all_ports),
