@@ -31,18 +31,21 @@ class Firewall(object):
         connection.send(of.ofp_flow_mod(
             action=of.ofp_action_output(port=all_ports),
             priority=3,
-            match=of.ofp_match(dl_type=0x0800, nw_proto=pkt.ipv4.ICMP_PROTOCOL)))
+            match=of.ofp_match(dl_type=0x0800, nw_proto=pkt.ipv4.ICMP_PROTOCOL
+        )))
         
         # Allow any ARP
         connection.send(of.ofp_flow_mod(
             action=of.ofp_action_output(port=all_ports),
             priority=2,
-            match=of.ofp_match(dl_type=0x0806)))
+            match=of.ofp_match(dl_type=0x0806
+        )))
 
         # Drop any IPv4 packet that is not ICMP
         self.connection.send(of.ofp_flow_mod(
             priority=1,
-            match=of.ofp_match(dl_type=0x0800)))
+            match=of.ofp_match(dl_type=0x0800
+        )))
 
 
 
