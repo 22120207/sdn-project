@@ -84,7 +84,8 @@ class Part3Controller(object):
     def drop_packet(self, connection):
         # Drop packets that not match others flow entries
         connection.send(of.ofp_flow_mod(
-            priority=PRIORITIES['no_priority']
+            priority=PRIORITIES['no_priority'],
+            match=of.ofp_match(dl_type=0x0800)
         ))
 
     def allow_all_traffic(self, connection):
@@ -95,7 +96,7 @@ class Part3Controller(object):
         ))
 
         # Drop packets that not match others flow entries
-        drop_packet(connection)
+        self.drop_packet(connection)
 
 
     def control_icmp_traffic(self, connection):
@@ -133,7 +134,7 @@ class Part3Controller(object):
         ))
 
         # Drop packets that not match others flow entries
-        drop_packet(connection)
+        self.drop_packet(connection)
     
 
     ## Set up RULES ##
